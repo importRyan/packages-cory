@@ -841,6 +841,9 @@ NSString *const errorMethod = @"error";
     case FLTExposureModeAuto:
       if ([_captureDevice isExposureModeSupported:AVCaptureExposureModeContinuousAutoExposure]) {
         [_captureDevice setExposureMode:AVCaptureExposureModeContinuousAutoExposure];
+        if (@available(iOS 15.4, *)) {
+          [_captureDevice setAutomaticallyAdjustsFaceDrivenAutoExposureEnabled:false];
+        }
       } else {
         [_captureDevice setExposureMode:AVCaptureExposureModeAutoExpose];
       }
@@ -885,8 +888,15 @@ NSString *const errorMethod = @"error";
     case FLTFocusModeAuto:
       if ([captureDevice isFocusModeSupported:AVCaptureFocusModeContinuousAutoFocus]) {
         [captureDevice setFocusMode:AVCaptureFocusModeContinuousAutoFocus];
+        if (@available(iOS 15.4, *)) {
+          [captureDevice setAutomaticallyAdjustsFaceDrivenAutoFocusEnabled:false];
+        }
       } else if ([captureDevice isFocusModeSupported:AVCaptureFocusModeAutoFocus]) {
         [captureDevice setFocusMode:AVCaptureFocusModeAutoFocus];
+      }
+
+      if ([captureDevice isAutoFocusRangeRestrictionSupported]) {
+          [captureDevice setAutoFocusRangeRestriction:AVCaptureAutoFocusRangeRestrictionNear];
       }
       break;
     case FLTFocusModeInvalid:
@@ -1099,13 +1109,37 @@ NSString *const errorMethod = @"error";
     [result sendErrorWithCode:@"ZOOM_ERROR" message:errorMessage details:nil];
     return;
   }
+  
+  CGFloat standardZoomFactor = 1;
+  if (zoom == 1) {
+    if (@available(iOS 13.0, *)) {
+        NSArray<AVCaptureDevice *> *constituentDevices = _captureDevice.constituentDevices;
+        for (NSInteger index = 0; index < constituentDevices.count; index++) {
+            AVCaptureDevice *actualDevice = constituentDevices[index];
+            if (actualDevice.deviceType != AVCaptureDeviceTypeBuiltInUltraWideCamera) {
+                // Improved bounds checking
+                if (index > 0 && _captureDevice.virtualDeviceSwitchOverVideoZoomFactors.count > index - 1) {
+                    NSNumber *zoomFactorNumber = _captureDevice.virtualDeviceSwitchOverVideoZoomFactors[index - 1];
+                    standardZoomFactor = zoomFactorNumber.floatValue;
+                }
+                break;
+            }
+        }
+    }
+}
 
   NSError *error = nil;
   if (![_captureDevice lockForConfiguration:&error]) {
     [result sendError:error];
     return;
   }
-  _captureDevice.videoZoomFactor = zoom;
+
+  if (zoom == 1) {
+    _captureDevice.videoZoomFactor = standardZoomFactor;
+  } else {
+    _captureDevice.videoZoomFactor = zoom;
+  }
+
   [_captureDevice unlockForConfiguration];
 
   [result sendSuccess];

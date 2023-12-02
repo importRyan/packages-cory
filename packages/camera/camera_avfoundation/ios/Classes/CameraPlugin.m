@@ -105,10 +105,13 @@
                        result:(FLTThreadSafeFlutterResult *)result {
   if ([@"availableCameras" isEqualToString:call.method]) {
     NSMutableArray *discoveryDevices =
-        [@[ AVCaptureDeviceTypeBuiltInWideAngleCamera, AVCaptureDeviceTypeBuiltInTelephotoCamera ]
+        [@[ AVCaptureDeviceTypeBuiltInTelephotoCamera, AVCaptureDeviceTypeBuiltInWideAngleCamera ]
             mutableCopy];
     if (@available(iOS 13.0, *)) {
-      [discoveryDevices addObject:AVCaptureDeviceTypeBuiltInUltraWideCamera];
+      // [discoveryDevices addObject:AVCaptureDeviceTypeBuiltInUltraWideCamera];
+      [discoveryDevices addObject:AVCaptureDeviceTypeBuiltInDualCamera];
+      [discoveryDevices addObject:AVCaptureDeviceTypeBuiltInDualWideCamera];
+      [discoveryDevices addObject:AVCaptureDeviceTypeBuiltInTripleCamera];
     }
     AVCaptureDeviceDiscoverySession *discoverySession = [AVCaptureDeviceDiscoverySession
         discoverySessionWithDeviceTypes:discoveryDevices
