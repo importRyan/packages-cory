@@ -24,6 +24,8 @@ public class ImageProxyHostApiImpl implements ImageProxyHostApi {
   private final BinaryMessenger binaryMessenger;
   private final InstanceManager instanceManager;
 
+  private final ImageStreamReaderUtils imageStreamReaderUtils;
+
   @VisibleForTesting @NonNull public CameraXProxy cameraXProxy = new CameraXProxy();
 
   @VisibleForTesting @NonNull public PlaneProxyFlutterApiImpl planeProxyFlutterApiImpl;
@@ -37,6 +39,7 @@ public class ImageProxyHostApiImpl implements ImageProxyHostApi {
       @NonNull BinaryMessenger binaryMessenger, @NonNull InstanceManager instanceManager) {
     this.binaryMessenger = binaryMessenger;
     this.instanceManager = instanceManager;
+    this.imageStreamReaderUtils = new ImageStreamReaderUtils();
     planeProxyFlutterApiImpl = new PlaneProxyFlutterApiImpl(binaryMessenger, instanceManager);
   }
 
@@ -47,11 +50,16 @@ public class ImageProxyHostApiImpl implements ImageProxyHostApi {
   @Override
   @NonNull
   public List<Long> getPlanes(@NonNull Long identifier) {
-    ImageProxy.PlaneProxy[] planes = getImageProxyInstance(identifier).getPlanes();
+    ImageProxy image = getImageProxyInstance(identifier);
+    ImageProxy.PlaneProxy[] planes = image.getPlanes();
     List<Long> planeIdentifiers = new ArrayList<Long>();
 
+    // We will convert the YUV data to NV21 which is a single-plane image
+    ByteBuffer byteBuffer =
+            imageStreamReaderUtils.yuv420ThreePlanesToNV21(
+                    image.getPlanes(), image.getWidth(), image.getHeight());
+
     for (ImageProxy.PlaneProxy plane : planes) {
-      ByteBuffer byteBuffer = plane.getBuffer();
       byte[] bytes = cameraXProxy.getBytesFromBuffer(byteBuffer.remaining());
       byteBuffer.get(bytes, 0, bytes.length);
       Long pixelStride = Long.valueOf(plane.getPixelStride());
@@ -59,6 +67,7 @@ public class ImageProxyHostApiImpl implements ImageProxyHostApi {
 
       planeProxyFlutterApiImpl.create(plane, bytes, pixelStride, rowStride, reply -> {});
       planeIdentifiers.add(instanceManager.getIdentifierForStrongReference(plane));
+      break;
     }
 
     return planeIdentifiers;
