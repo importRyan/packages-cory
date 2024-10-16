@@ -620,6 +620,9 @@ class CameraController extends ValueNotifier<CameraValue> {
 
   /// Returns a widget showing a live camera preview.
   Widget buildPreview() {
+    if (_isDisposed) {
+      return SizedBox.expand(child: Container(color: Colors.black));
+    }
     _throwIfNotInitialized('buildPreview');
     try {
       return CameraPlatform.instance.buildPreview(_cameraId);
