@@ -346,6 +346,7 @@ NSString *const errorMethod = @"error";
 }
 
 - (BOOL)setCaptureSessionPreset:(FLTResolutionPreset)resolutionPreset withError:(NSError **)error {
+  _videoCaptureSession.automaticallyConfiguresCaptureDeviceForWideColor = false;
   switch (resolutionPreset) {
     case FLTResolutionPresetMax:
     case FLTResolutionPresetUltraHigh:
